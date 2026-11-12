@@ -13,8 +13,8 @@ moving bikes.
 Use Python 3.12 and run these commands from the repository root:
 
 ```bash
-git clone https://github.com/safi111287/lab07-first-principles.git lab07-test
-cd lab07-test
+git clone https://github.com/safi111287/lab07-first-principles.git
+cd lab07-first-principles
 conda env create -f environment.yml
 conda activate lab07-first-principles
 python bikes_data.py
@@ -23,11 +23,6 @@ python -m ruff format --check .
 python -m ruff check .
 python -m pytest
 ```
-### Note:
-If activation does not work in VS code Command Prompt terminal, use:
-```
-C:\path to conda.bat\conda.bat activate lab07-first-principles
-```
 
 If the environment already exists, update it with
 `conda env update -n lab07-first-principles -f environment.yml`.
@@ -35,6 +30,18 @@ The environment installs `requirements-dev.txt`, which includes the runtime
 requirements. Exact direct dependency versions are pinned. The PyTorch CPU wheel
 is pinned explicitly and its package index is included in `requirements.txt`;
 no CUDA installation or GPU is needed on Windows or Linux.
+
+On Windows, use Anaconda Prompt or select **Command Prompt** from the VS Code
+terminal menu before activating the environment. If needed, use:
+
+```bat
+conda.bat activate lab07-first-principles
+python -c "import sys; print(sys.executable)"
+```
+
+The printed path must point to `envs/lab07-first-principles`. Selecting the
+interpreter in VS Code does not necessarily activate an existing terminal.
+If PowerShell blocks activation scripts, use Command Prompt instead.
 
 If terminal activation selects a different Python, use the explicit environment:
 
@@ -105,8 +112,9 @@ Python, NumPy and PyTorch use seed 2026. Each run resets initialization and the
 training DataLoader generator to that seed, uses CPU execution, one PyTorch thread
 and deterministic algorithms. Experiments share the same splits and initial
 architecture. Repeated runs on the same software and computer reproduce the
-numbers. Another platform may differ in the final digits; `metrics.json` records
-the runtime package versions. Reference execution used Python 3.12.14,
+numbers. Different platforms can produce numerical differences and select different
+best epochs; `metrics.json` records
+the runtime package versions. Reference execution used Python 3.12.16,
 torch 2.6.0+cpu, NumPy 2.3.5, pandas 2.2.3, scikit-learn 1.8.0 and
 matplotlib 3.10.8.
 
@@ -123,22 +131,23 @@ on the test set, and no settings were changed in response to the test result.
 |---|---:|---:|
 | Training mean | 9.951945 | 9.848395 |
 | Linear regression | 9.032177 | 8.762954 |
-| Neural network at restored epoch 105 | 2.550627 | 2.421072 |
+| Neural network at restored epoch 238 | 2.571631 | 2.491182 |
 
 The linear model improves slightly on a constant but still misses the curved
 hourly peaks and interactions visible in the training-data plot. The network
 learns these nonlinear patterns and has a substantially lower test MAE. An MAE
-of 2.421072 means the average absolute error is about 2.42 rentals per
+of 2.491182 means the average absolute error is about 2.49 rentals per
 station-hour on this synthetic test set; it is not an accuracy percentage.
-The selected network's test MSE is 12.803972 rentals squared.
+The selected network's test MSE is 13.355129 rentals squared.
 
 ![Main run training and validation MSE](reports/learning_curves.png)
 
-The main curve falls quickly, then improves more slowly. Its lowest validation
-MSE is 14.150525 at epoch 105. Training MSE continues down to 9.226685 at epoch
-250, while final validation MSE is 15.722697. That later gap and lack of sustained
-validation improvement suggest mild overfitting after the best checkpoint; the
-restored epoch 105 is used for the final result.
+The main run reaches its lowest validation MSE, 14.062705, at epoch 238.
+At epoch 250, training MSE is 9.125448 and validation MSE is 15.312430.
+The lower training loss and worse final validation loss show a generalization
+gap and a reason to restore the best checkpoint rather than retain the final
+weights. These endpoint values alone do not establish a sustained overfitting
+trend. The restored epoch 238 is used for the final result.
 
 ## Experiments
 
@@ -149,9 +158,9 @@ validation MSE across these three runs. The main run wins this comparison.
 
 | Run | Learning rate | Best epoch by MSE | Lowest validation MAE during run | Validation MAE at restored best MSE | Final training MSE | Final validation MSE |
 |---|---:|---:|---:|---:|---:|---:|
-| Main | 0.003 | 105 | 2.497910 | 2.550627 | 9.226685 | 15.722697 |
-| Slow learning | 0.00001 | 250 | 8.771483 | 9.135968 | 178.731081 | 179.955205 |
-| Fast learning | 0.1 | 249 | 2.827001 | 2.902485 | 15.823998 | 22.059230 |
+| Main | 0.003 | 238 | 2.484661 | 2.571631 | 9.125448 | 15.312430 |
+| Slow learning | 1e-05 | 250 | 8.771483 | 9.135968 | 178.731081 | 179.955204 |
+| Fast learning | 0.1 | 67 | 2.827001 | 2.856122 | 16.128429 | 22.588268 |
 
 MSE is in rentals squared; MAE is in rentals. The lowest validation MAE and the
 MAE at the minimum-MSE checkpoint can occur at different epochs, because MSE
@@ -159,8 +168,8 @@ penalizes large errors more strongly. The final-loss columns describe epoch 250,
 before best-weight restoration. `experiments.csv` also records the best MSE.
 
 **Main run:** It learns the main patterns and has the best validation MSE. Later
-training brings limited validation benefit and mild overfitting, as described
-above. This is the selected configuration.
+training does not guarantee a better validation score, and the final epoch
+is worse than the restored checkpoint. This is the selected configuration.
 
 **Slow learning:** At the same epoch budget, training and validation losses remain
 high and close together. The loss is still decreasing at epoch 250. This is
@@ -170,12 +179,13 @@ It might improve with more epochs, but that was not tested.
 
 ![Slow learning experiment](reports/curves_slow_learning.png)
 
-**Fast learning:** It learns faster initially but has a noisier validation curve
-and a worse best MSE, 17.372640, than the main run. Its best checkpoint is epoch
-249, but the next epoch's validation MSE rises to 22.059230. The large learning
-rate causes unstable updates; best-weight restoration protects against retaining
-that worse final epoch. It does not diverge completely, and the results do not
-justify calling it a failure to learn.
+**Fast learning:** Its best validation MSE is 17.588444 at epoch 67, worse than
+14.062705 for the main run. At epoch 250, training MSE is 16.128429 and validation
+MSE is 22.588268. Continuing training beyond the best checkpoint does not improve
+the selected score. This is consistent with an excessive learning rate causing
+updates that fail to settle reliably, although endpoint values alone cannot
+separate instability from overfitting. The run still learns substantially more
+than the very slow run; it is not a complete failure to learn.
 
 ![Fast learning experiment](reports/curves_fast_learning.png)
 
