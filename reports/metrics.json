@@ -1,0 +1,44 @@
+{
+  "seed": 2026,
+  "split_sizes": {
+    "train": 3600,
+    "validation": 1200,
+    "test": 1200
+  },
+  "selected_run": "main",
+  "selection_rule": "Lowest validation MSE at the restored best epoch",
+  "selected_best_epoch": 105,
+  "feature_names": [
+    "numeric__hour",
+    "numeric__temperature_c",
+    "numeric__rain_mm",
+    "numeric__wind_kph",
+    "numeric__is_weekend",
+    "categorical__station_type_downtown",
+    "categorical__station_type_park",
+    "categorical__station_type_residential"
+  ],
+  "training_target_mean": 10.60388888888889,
+  "results": {
+    "Training mean": {
+      "validation_mae": 9.951945370370371,
+      "test_mae": 9.84839537037037
+    },
+    "Linear regression": {
+      "validation_mae": 9.032176971435547,
+      "test_mae": 8.762953758239746
+    },
+    "Neural network": {
+      "validation_mae": 2.5506272252400715,
+      "test_mae": 2.4210715611775715,
+      "test_mse": 12.80397201538086
+    }
+  },
+  "versions": {
+    "torch": "2.6.0+cpu",
+    "numpy": "2.3.5",
+    "pandas": "2.2.3",
+    "scikit-learn": "1.8.0",
+    "matplotlib": "3.10.8"
+  }
+}
